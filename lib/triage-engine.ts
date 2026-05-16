@@ -187,7 +187,26 @@ export function triage(skus: Sku[]): TriageLanes {
       .sort((a, b) => a.sku.id.localeCompare(b.sku.id)),
   };
 }
+// ─── Batch totals — feed the hero "money at stake" line ────────────────────
 
+export interface BatchTotals {
+  /** Sum of margin preserved across all drop-to-win recommendations, in Rs. */
+  recoverableMargin: number;
+  /** Sum of per-unit margin uplift across all raise-for-margin recommendations, in Rs. */
+  marginToCapture: number;
+}
+
+export function batchTotals(lanes: TriageLanes): BatchTotals {
+  const recoverableMargin = lanes.urgent.reduce(
+    (sum, i) => sum + (i.bufferAboveFloor ?? 0),
+    0
+  );
+  const marginToCapture = lanes.opportunities.reduce(
+    (sum, i) => sum + (i.targetPrice !== null ? i.targetPrice - i.sku.ourPrice : 0),
+    0
+  );
+  return { recoverableMargin, marginToCapture };
+}
 // ─── Hard safety check — used in API route and tests ────────────────────────
 
 /**

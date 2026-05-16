@@ -114,6 +114,19 @@ export function TriageView({ lanes }: { lanes: TriageLanes }) {
     (i) => !repricedIds.has(i.sku.id)
   );
 
+  // Live totals — decrease as Ranjit applies changes. The static `totals` prop
+  // we receive is only used as a sanity check; what the UI shows reflects the
+  // current state of the queue.
+  const visibleRecoverable = visibleUrgent.reduce(
+    (sum, i) => sum + (i.bufferAboveFloor ?? 0),
+    0
+  );
+  const visibleUplift = visibleOpportunities.reduce(
+    (sum, i) =>
+      sum + (i.targetPrice !== null ? i.targetPrice - i.sku.ourPrice : 0),
+    0
+  );
+
   const totalActionable = visibleUrgent.length + visibleOpportunities.length;
   const allClear = totalActionable === 0;
 
@@ -124,6 +137,8 @@ export function TriageView({ lanes }: { lanes: TriageLanes }) {
         opportunityCount={visibleOpportunities.length}
         monitoringCount={lanes.monitoring.length}
         repricedCount={repriced.length}
+        recoverableMargin={visibleRecoverable}
+        marginToCapture={visibleUplift}
         onReset={handleResetAll}
       />
 

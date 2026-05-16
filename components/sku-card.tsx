@@ -28,6 +28,9 @@ export function SkuCard({
 
   const lastChangedLabel = labelDays(item.sku.daysSinceLastChange);
 
+  const priorityTooltip =
+    "Ranked by money-at-stake × days lost — bigger recoverable margin × longer bleeding = higher priority.";
+
   const handleApply = () => {
     if (!item.targetPrice) return;
     setApplying(true);
@@ -47,7 +50,8 @@ export function SkuCard({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
           {priority !== undefined && isUrgent && (
             <span
-              className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${accent.chip}`}
+              title={priorityTooltip}
+              className={`inline-flex cursor-help items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${accent.chip}`}
             >
               #{priority}
               {priority === 1 && (
@@ -79,7 +83,38 @@ export function SkuCard({
           )}
         </div>
 
-        {/* ACTION ROW — meta info + Why? disclosure + Apply */}
+        {/* WHY? — promoted to its own row directly under the recommendation */}
+        {recommendation && !loading && (
+          <button
+            type="button"
+            onClick={() => setShowWhy((x) => !x)}
+            className="fade-in mt-2.5 inline-flex items-center gap-1 text-[13px] font-medium text-muted transition-colors hover:text-ink"
+            aria-expanded={showWhy}
+          >
+            <span>{showWhy ? "Hide trade-off" : "Why this price?"}</span>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className={`transition-transform ${showWhy ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        )}
+
+        {/* TRADE-OFF PANEL — revealed on click */}
+        {showWhy && recommendation && (
+          <div className="fade-in mt-2 rounded-md bg-cream/50 px-4 py-3 text-sm leading-relaxed text-ink/80">
+            {recommendation.tradeoff}
+          </div>
+        )}
+
+        {/* ACTION ROW — price change + Apply */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-3">
           <div className="flex items-center gap-3 text-xs">
             <span className="font-mono text-muted tabular">
@@ -89,15 +124,6 @@ export function SkuCard({
             <span className="price-display font-medium text-ink">
               Rs.{item.targetPrice?.toLocaleString("en-IN") ?? "—"}
             </span>
-            {recommendation && !loading && (
-              <button
-                type="button"
-                onClick={() => setShowWhy((x) => !x)}
-                className="text-xs uppercase tracking-wider text-muted underline-offset-4 hover:text-ink hover:underline"
-              >
-                {showWhy ? "Hide" : "Why?"}
-              </button>
-            )}
           </div>
 
           <ApplyButton
@@ -106,16 +132,6 @@ export function SkuCard({
             onClick={handleApply}
           />
         </div>
-
-        {/* TRADEOFF — hidden by default, revealed on click */}
-        {showWhy && recommendation && (
-          <div className="fade-in mt-3 rounded-md bg-cream/40 px-4 py-3 text-sm leading-relaxed text-ink/75">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-              Trade-off
-            </div>
-            <p className="mt-1">{recommendation.tradeoff}</p>
-          </div>
-        )}
       </div>
     </article>
   );
