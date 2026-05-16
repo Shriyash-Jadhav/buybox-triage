@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* Tabular numerals for prices — money should align in vertical lists */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Subtle paper grain — adds warmth without being a noise gimmick */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(
+        rgba(26, 24, 20, 0.025) 1px,
+        transparent 1px
+      );
+    background-size: 3px 3px;
+    z-index: 0;
+  }
+
+  /* Selection in the accent color — small touch of personality */
+  ::selection {
+    background-color: #fdf1e8;
+    color: #c2410c;
+  }
+}
+
+@layer components {
+  .lane-rule {
+    @apply h-px w-full bg-rule;
+  }
+
+  .price-display {
+    @apply font-mono tabular tracking-tightest;
+  }
+
+  /* Fade-in for streamed/loaded content */
+  .fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Subtle skeleton shimmer for the loading state */
+  .skeleton {
+    @apply bg-rule rounded;
+    background: linear-gradient(
+      90deg,
+      #e8e2d5 0%,
+      #f0e9d8 50%,
+      #e8e2d5 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+}
