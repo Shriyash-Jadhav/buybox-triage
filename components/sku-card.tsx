@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { TriageItem, Recommendation } from "@/lib/types";
-import { actionLabel } from "@/lib/triage-engine";
 
 interface SkuCardProps {
   item: TriageItem;
@@ -20,6 +19,7 @@ export function SkuCard({
   priority,
 }: SkuCardProps) {
   const [applying, setApplying] = useState(false);
+  const [showWhy, setShowWhy] = useState(false);
 
   const isUrgent = item.action === "drop_to_win";
   const accent = isUrgent
@@ -31,7 +31,6 @@ export function SkuCard({
   const handleApply = () => {
     if (!item.targetPrice) return;
     setApplying(true);
-    // Small delay so the user sees the state change before the card removes
     setTimeout(() => {
       onApply(item.sku.id, item.sku.ourPrice, item.targetPrice!);
     }, 280);
@@ -43,14 +42,17 @@ export function SkuCard({
         applying ? "translate-y-[-4px] opacity-0" : "fade-in"
       }`}
     >
-      <div className="p-6 md:p-7">
+      <div className="px-5 py-4 md:px-6 md:py-5">
         {/* META STRIP */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
           {priority !== undefined && isUrgent && (
             <span
               className={`inline-flex items-center rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${accent.chip}`}
             >
-              #{priority} {priority === 1 && "· Top priority"}
+              #{priority}
+              {priority === 1 && (
+                <span className="ml-1 hidden sm:inline">· Top priority</span>
+              )}
             </span>
           )}
           <span className="font-mono text-ink tabular">{item.sku.id}</span>
@@ -60,44 +62,41 @@ export function SkuCard({
           <span className="text-muted">{item.sku.marketplace}</span>
           <span className="text-rule">·</span>
           <span className="text-muted">
-            {isUrgent ? `Lost ${lastChangedLabel}` : `Won, last changed ${lastChangedLabel}`}
+            {isUrgent
+              ? `Lost ${lastChangedLabel}`
+              : `Won, changed ${lastChangedLabel}`}
           </span>
         </div>
 
         {/* RECOMMENDATION — the verdict */}
-        <div className="mt-5 min-h-[5.5rem]">
+        <div className="mt-3">
           {loading || !recommendation ? (
             <RecommendationSkeleton />
           ) : (
-            <p className="fade-in font-serif text-[20px] leading-[1.35] tracking-[-0.01em] text-ink md:text-[22px]">
+            <p className="fade-in font-serif text-[17px] leading-[1.4] tracking-[-0.01em] text-ink md:text-[18px]">
               {recommendation.headline}
             </p>
           )}
         </div>
 
-        {/* TRADEOFF — subordinate */}
-        {recommendation && !loading && (
-          <p className="fade-in mt-4 max-w-[60ch] text-sm leading-relaxed text-muted">
-            <span className="font-medium text-ink/80">Trade-off · </span>
-            {recommendation.tradeoff}
-          </p>
-        )}
-
-        {/* ACTION ROW */}
-        <div className="mt-6 flex items-end justify-between gap-4 border-t border-rule pt-4">
-          <div className="text-xs text-muted">
-            <span className="uppercase tracking-wider">{actionLabel(item.action)}</span>
-            {item.targetPrice !== null && (
-              <>
-                <span className="mx-2 text-rule">·</span>
-                <span className="font-mono text-ink tabular">
-                  Rs.{item.sku.ourPrice.toLocaleString("en-IN")}
-                </span>
-                <span className="mx-1 text-rule">→</span>
-                <span className="price-display text-ink">
-                  Rs.{item.targetPrice.toLocaleString("en-IN")}
-                </span>
-              </>
+        {/* ACTION ROW — meta info + Why? disclosure + Apply */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-3">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-mono text-muted tabular">
+              Rs.{item.sku.ourPrice.toLocaleString("en-IN")}
+            </span>
+            <span className="text-rule">→</span>
+            <span className="price-display font-medium text-ink">
+              Rs.{item.targetPrice?.toLocaleString("en-IN") ?? "—"}
+            </span>
+            {recommendation && !loading && (
+              <button
+                type="button"
+                onClick={() => setShowWhy((x) => !x)}
+                className="text-xs uppercase tracking-wider text-muted underline-offset-4 hover:text-ink hover:underline"
+              >
+                {showWhy ? "Hide" : "Why?"}
+              </button>
             )}
           </div>
 
@@ -107,6 +106,16 @@ export function SkuCard({
             onClick={handleApply}
           />
         </div>
+
+        {/* TRADEOFF — hidden by default, revealed on click */}
+        {showWhy && recommendation && (
+          <div className="fade-in mt-3 rounded-md bg-cream/40 px-4 py-3 text-sm leading-relaxed text-ink/75">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              Trade-off
+            </div>
+            <p className="mt-1">{recommendation.tradeoff}</p>
+          </div>
+        )}
       </div>
     </article>
   );
@@ -116,10 +125,9 @@ export function SkuCard({
 
 function RecommendationSkeleton() {
   return (
-    <div className="space-y-2 pt-1">
-      <div className="skeleton h-5 w-[92%]" />
-      <div className="skeleton h-5 w-[88%]" />
-      <div className="skeleton h-5 w-[64%]" />
+    <div className="space-y-1.5 py-0.5">
+      <div className="skeleton h-4 w-[92%]" />
+      <div className="skeleton h-4 w-[68%]" />
     </div>
   );
 }
@@ -134,7 +142,7 @@ function ApplyButton({
   onClick: () => void;
 }) {
   const base =
-    "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40";
+    "inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40";
   const active = isUrgent
     ? "bg-urgent text-white hover:bg-[#9A330A] active:translate-y-px"
     : "bg-healthy text-white hover:bg-[#324E0E] active:translate-y-px";
@@ -148,8 +156,8 @@ function ApplyButton({
     >
       Apply change
       <svg
-        width="14"
-        height="14"
+        width="13"
+        height="13"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -165,5 +173,5 @@ function ApplyButton({
 function labelDays(days: number): string {
   if (days === 0) return "today";
   if (days === 1) return "yesterday";
-  return `${days} days ago`;
+  return `${days}d ago`;
 }

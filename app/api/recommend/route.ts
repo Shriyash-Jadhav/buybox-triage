@@ -31,14 +31,30 @@ For each SKU you receive, produce two sentences:
    Anti-example (do not write like this):
    "You should consider lowering the price while being mindful of margins."
 
-2. tradeoff — ONE short sentence (under 25 words) naming the second-order risk or cost. What does this action give up? What should Ranjit watch after applying it?
+2. tradeoff — ONE short sentence (under 22 words) that MUST follow one of these three patterns. Generic "monitor closely" advice is filler and forbidden.
+
+   Pattern A — Comparative across the batch:
+     "Thinnest margin buffer of the four lose-recovery SKUs — least room to absorb cost increases."
+     "Largest absolute margin uplift in the batch (Rs.230/unit), but on a same-day price change."
+
+   Pattern B — Cite a specific number that creates risk:
+     "Rs.139 buffer leaves no room if competitor reprices within Rs.130 of margin floor."
+     "Six-day stale price — competitor likely re-anchored their algorithm; drop may not flip Buy Box instantly."
+
+   Pattern C — Name a specific Buy Box mechanic:
+     "Same-day raise risks losing Buy Box before Amazon's algo re-confirms — verify lock at +2h."
+     "Match-to-floor recovery has zero buffer; one competitor drop puts us below floor."
+
+   Forbidden tradeoff openings: "Monitor", "Track", "Watch closely", "Keep an eye", "Be cautious".
+   Forbidden generic phrasing: "may trigger competitor response", "risks aggressive response", "monitor daily".
 
 HARD RULES:
 - Use the numbers I give you exactly. Do not recompute, round differently, or substitute.
 - Never recommend a price below the margin floor. If I gave you a target, it's already safe — echo it verbatim.
-- No hedging words: "consider", "might want to", "perhaps", "could potentially". You are recommending, not musing.
+- No hedging words in the headline: "consider", "might want to", "perhaps", "could potentially". You are recommending, not musing.
 - No filler: "in order to", "as you can see", "it is important to note".
-- Use Indian currency formatting: Rs.1,189 (comma after thousand).`;
+- Use Indian currency formatting: Rs.1,189 (comma after thousand).
+- The tradeoff must reference a SPECIFIC NUMBER or a SPECIFIC COMPARISON across SKUs in the batch. If you can't, the tradeoff is filler — re-think.`;
 
 interface RecommendRequest {
   items: Array<{
@@ -118,10 +134,30 @@ export async function POST(req: Request) {
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+  // Pre-compute batch-level comparisons so the LLM can write Pattern A
+  // tradeoffs ("thinnest", "largest", etc.) without re-deriving them.
+  const dropItems = body.items.filter((i) => i.action === "drop_to_win");
+  const raiseItems = body.items.filter((i) => i.action === "raise_for_margin");
+  const buffers = dropItems.map((i) => ({ skuId: i.skuId, buffer: i.bufferAboveFloor }));
+  buffers.sort((a, b) => a.buffer - b.buffer);
+  const thinnestBuffer = buffers[0];
+  const thickestBuffer = buffers[buffers.length - 1];
+  const stalest = [...dropItems].sort(
+    (a, b) => b.daysSinceLastChange - a.daysSinceLastChange
+  )[0];
+
+  const batchContext = `BATCH CONTEXT (use for comparative tradeoffs):
+- ${dropItems.length} lose-recovery SKU${dropItems.length === 1 ? "" : "s"}, ${raiseItems.length} raise opportunit${raiseItems.length === 1 ? "y" : "ies"}.
+${thinnestBuffer ? `- THINNEST margin buffer: ${thinnestBuffer.skuId} (Rs.${thinnestBuffer.buffer.toLocaleString("en-IN")} above floor).` : ""}
+${thickestBuffer && buffers.length > 1 ? `- THICKEST margin buffer: ${thickestBuffer.skuId} (Rs.${thickestBuffer.buffer.toLocaleString("en-IN")} above floor).` : ""}
+${stalest ? `- LONGEST stale: ${stalest.skuId} (${stalest.daysSinceLastChange} days since last change).` : ""}`;
+
   // The user message hands Claude the structured facts and tells it explicitly
   // which numbers to echo. We're not asking it to think — we're asking it to
   // phrase.
   const userMessage = `Write recommendations for these ${body.items.length} SKUs. Use the numbers exactly as given.
+
+${batchContext}
 
 ${body.items
   .map(

@@ -138,7 +138,7 @@ export function TriageView({ lanes }: { lanes: TriageLanes }) {
         </div>
       )}
 
-      <div className="mt-12 space-y-14">
+            <div className="mt-10 space-y-10">
         {/* LANE 1 — URGENT: Buy Box Lost, drop to recover */}
         {visibleUrgent.length > 0 && (
           <Lane
